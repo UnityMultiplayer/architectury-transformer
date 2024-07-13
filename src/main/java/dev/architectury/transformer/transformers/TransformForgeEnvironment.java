@@ -65,6 +65,7 @@ public class TransformForgeEnvironment implements TinyRemapperTransformer {
     }
     
     private List<IMappingProvider> mapMixin() throws IOException {
+        String productionNamespace = System.getProperty(BuiltinProperties.FORGE_PRODUCTION_NAMESPACE, "srg");
         List<IMappingProvider> providers = new ArrayList<>();
         
         if (srg == null) {
@@ -86,7 +87,7 @@ public class TransformForgeEnvironment implements TinyRemapperTransformer {
                                     .stream()
                                     .filter(it -> Objects.equals(it.getName("intermediary"), dstName))
                                     .findFirst()
-                                    .map(it -> it.getName("srg"))
+                                    .map(it -> it.getName(productionNamespace))
                                     .orElse(dstName);
                             sink.acceptClass(srcName, srgName);
                             Logger.debug("Remap mixin class %s -> %s", srcName, srgName);
@@ -99,7 +100,7 @@ public class TransformForgeEnvironment implements TinyRemapperTransformer {
                                     .flatMap(it -> it.getMethods().stream())
                                     .filter(it -> Objects.equals(it.getName("intermediary"), dstName))
                                     .findFirst()
-                                    .map(it -> it.getName("srg"))
+                                    .map(it -> it.getName(productionNamespace))
                                     .orElse(dstName);
                             sink.acceptMethod(method, srgName);
                             Logger.debug("Remap mixin method %s#%s%s -> %s", method.owner, method.name, method.desc, srgName);
@@ -112,7 +113,7 @@ public class TransformForgeEnvironment implements TinyRemapperTransformer {
                                     .flatMap(it -> it.getFields().stream())
                                     .filter(it -> Objects.equals(it.getName("intermediary"), dstName))
                                     .findFirst()
-                                    .map(it -> it.getName("srg"))
+                                    .map(it -> it.getName(productionNamespace))
                                     .orElse(dstName);
                             sink.acceptField(field, srgName);
                             Logger.debug("Remap mixin field %s#%s:%s -> %s", field.owner, field.name, field.desc, srgName);
