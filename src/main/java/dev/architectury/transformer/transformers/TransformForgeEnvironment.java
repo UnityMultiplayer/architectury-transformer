@@ -45,9 +45,12 @@ public class TransformForgeEnvironment implements TinyRemapperTransformer {
     
     @Override
     public List<IMappingProvider> collectMappings() throws Exception {
-        List<IMappingProvider> providers = mapMixin();
-        providers.add(remapEnvironment());
-        return providers;
+        boolean fixMixins = System.getProperty(BuiltinProperties.FORGE_FIX_MIXINS, "true").equals("true");
+        if (fixMixins) {
+            List<IMappingProvider> providers = mapMixin();
+            providers.add(remapEnvironment());
+            return providers;
+        } else return new ArrayList<>(Collections.singletonList(remapEnvironment()));
     }
     
     private IMappingProvider remapEnvironment() {

@@ -37,5 +37,6 @@ public class BuiltinProperties {
     public static final String PLATFORM_NAME = "architectury.platform.name";
     public static final String PLATFORM_PACKAGE = "architectury.platform.package";
     public static final String FORGE_PRODUCTION_NAMESPACE = "architectury.forge.production_namespace";
+    public static final String FORGE_FIX_MIXINS = "architectury.forge.fix_mixins";
     public static final String NEOFORGE_LIKE_REMAPS = "architectury.neoforge.forgelike_remaps";
 }
