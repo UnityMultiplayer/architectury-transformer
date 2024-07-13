@@ -55,6 +55,7 @@ public class FixForgeMixin implements AssetEditTransformer {
     
     @Override
     public void doEdit(TransformerContext context, FileAccess output) throws Exception {
+        String productionNamespace = System.getProperty(BuiltinProperties.FORGE_PRODUCTION_NAMESPACE, "srg");
         Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
         List<String> mixinConfigs = new ArrayList<>();
         String refmap = System.getProperty(BuiltinProperties.REFMAP_NAME);
@@ -110,7 +111,7 @@ public class FixForgeMixin implements AssetEditTransformer {
                         @Nullable
                         public String mapClass(String value) {
                             Mapped classDef = srgMap.get(value);
-                            return classDef == null ? null : classDef.getName("srg");
+                            return classDef == null ? null : classDef.getName(productionNamespace);
                         }
                         
                         @Override
@@ -120,10 +121,10 @@ public class FixForgeMixin implements AssetEditTransformer {
                             Mapped mapped;
                             if (className != null) {
                                 mapped = srgMap.get(className + " " + methodId);
-                                if (mapped != null) return mapped.getName("srg");
+                                if (mapped != null) return mapped.getName(productionNamespace);
                             }
                             mapped = srgMap.get(methodId);
-                            return mapped == null ? null : mapped.getName("srg");
+                            return mapped == null ? null : mapped.getName(productionNamespace);
                         }
                         
                         @Override
@@ -133,10 +134,10 @@ public class FixForgeMixin implements AssetEditTransformer {
                             Mapped mapped;
                             if (className != null) {
                                 mapped = srgMap.get(className + " " + fieldId);
-                                if (mapped != null) return mapped.getName("srg");
+                                if (mapped != null) return mapped.getName(productionNamespace);
                             }
                             mapped = srgMap.get(fieldId);
-                            return mapped == null ? null : mapped.getName("srg");
+                            return mapped == null ? null : mapped.getName(productionNamespace);
                         }
                     }) {
                         @Override
