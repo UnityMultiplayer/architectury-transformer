@@ -137,7 +137,7 @@ public class TransformerRuntime {
                 }
             }
         }
-        List<Path> tmpJars = new ArrayList<>();
+        List<Map.Entry<Path, PathWithTransformersEntry>> tmpJars = new ArrayList<>();
         classpathProvider = ReadClasspathProvider.of(ClasspathProvider.fromProperties().filter(path -> {
             File file = path.toFile().getAbsoluteFile();
             for (PathWithTransformersEntry path1 : toTransform) {
@@ -152,7 +152,7 @@ public class TransformerRuntime {
             Map<String, String> classRedefineCache = new HashMap<>();
             DirectoryFileAccess debugOut = debugOuts.get(entry.getPath());
             Path tmpJar = Files.createTempFile(null, ".jar");
-            tmpJars.add(tmpJar);
+            tmpJars.add(new AbstractMap.SimpleEntry<>(tmpJar, entry));
             Files.deleteIfExists(tmpJar);
             try (OpenedFileAccess outputInterface = OpenedFileAccess.ofJar(tmpJar)) {
                 try (OpenedFileAccess og = OpenedFileAccess.ofJar(entry.getPath())) {
@@ -208,15 +208,67 @@ public class TransformerRuntime {
         }
         
         List<String> cp = new ArrayList<>(Arrays.asList(System.getProperty("java.class.path", "").split(File.pathSeparator)));
-        for (Path tmpJar : tmpJars) {
-            cp.add(tmpJar.toAbsolutePath().toString());
+        for (Map.Entry<Path, PathWithTransformersEntry> tmpJar : tmpJars) {
+            cp.add(tmpJar.getKey().toAbsolutePath().toString());
         }
+        removeDuplicates(cp, tmpJars);
         System.setProperty("java.class.path", String.join(File.pathSeparator, cp));
         
         Path mainClassPath = Paths.get(System.getProperty(MAIN_CLASS));
         String mainClass = new String(Files.readAllBytes(mainClassPath), StandardCharsets.UTF_8);
         MethodHandle handle = MethodHandles.publicLookup().findStatic(Class.forName(mainClass), "main", MethodType.methodType(void.class, String[].class));
         handle.invokeExact((String[]) argsList.toArray(new String[0]));
+    }
+    
+    private static void removeDuplicates(List<String> cpList, List<Map.Entry<Path, PathWithTransformersEntry>> tmpJars) throws IOException {
+        List<Set<String>> tmpModules = new ArrayList<>();
+        for (Map.Entry<Path, PathWithTransformersEntry> tmpJar : tmpJars) {
+            try (OpenedFileAccess og = OpenedFileAccess.ofJar(tmpJar.getValue().path)) {
+                Set<String> modules = new HashSet<>();
+                og.handle(path -> {
+                    if (path.endsWith(".class")) {
+                        // Get package name, i.e. "dev/architectury/transformer/TransformerRuntime.class" -> "dev.architectury.transformer"
+                        String packageName = Transform.trimLeadingSlash(path).substring(0, Transform.trimLeadingSlash(path).lastIndexOf('/')).replace('/', '.');
+                        modules.add(packageName);
+                    }
+                });
+                tmpModules.add(modules);
+                Logger.debug("Temporary jar [%s] contains packages: %s", tmpJar.getKey(), String.join(", ", modules));
+            }
+        }
+        
+        cpList.removeIf(cp -> {
+            try {
+                Path cpPath = Paths.get(cp);
+                if (Files.isDirectory(cpPath)) {
+                    try (OpenedFileAccess ac = OpenedFileAccess.ofDirectory(cpPath)) {
+                        Set<String> modules = new HashSet<>();
+                        ac.handle(path -> {
+                            String relative = Transform.trimLeadingSlash(cpPath.relativize(Paths.get(path)).toString());
+                            if (relative.endsWith(".class")) {
+                                // Get package name, i.e. "dev/architectury/transformer/TransformerRuntime.class" -> "dev.architectury.transformer"
+                                String packageName = relative.substring(0, relative.lastIndexOf('/')).replace('/', '.');
+                                modules.add(packageName);
+                            }
+                        });
+                        Logger.debug("Classpath entry [%s] contains packages: %s", cp, String.join(", ", modules));
+                        if (modules.isEmpty()) {
+                            return false;
+                        }
+                        for (Set<String> module : tmpModules) {
+                            if (module.equals(modules)) {
+                                Logger.info("Removing duplicate classpath entry: " + cp);
+                                return true;
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
+            
+            return false;
+        });
     }
     
     private static List<PathWithTransformersEntry> parsePathWithTransformersEntries(String configText) throws IOException {
