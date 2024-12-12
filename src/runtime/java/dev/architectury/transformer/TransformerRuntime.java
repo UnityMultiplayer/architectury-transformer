@@ -227,8 +227,10 @@ public class TransformerRuntime {
                 Set<String> modules = new HashSet<>();
                 og.handle(path -> {
                     if (path.endsWith(".class")) {
+                        String sanitized = path.replace(File.separatorChar, '/');
+                        
                         // Get package name, i.e. "dev/architectury/transformer/TransformerRuntime.class" -> "dev.architectury.transformer"
-                        String packageName = Transform.trimLeadingSlash(path).substring(0, Transform.trimLeadingSlash(path).lastIndexOf('/')).replace('/', '.');
+                        String packageName = Transform.trimLeadingSlash(sanitized).substring(0, Transform.trimLeadingSlash(sanitized).lastIndexOf('/')).replace('/', '.');
                         modules.add(packageName);
                     }
                 });
@@ -244,7 +246,7 @@ public class TransformerRuntime {
                     try (OpenedFileAccess ac = OpenedFileAccess.ofDirectory(cpPath)) {
                         Set<String> modules = new HashSet<>();
                         ac.handle(path -> {
-                            String relative = Transform.trimLeadingSlash(cpPath.relativize(Paths.get(path)).toString());
+                            String relative = Transform.trimLeadingSlash(cpPath.relativize(Paths.get(path)).toString().replace(File.separatorChar, '/'));
                             if (relative.endsWith(".class")) {
                                 // Get package name, i.e. "dev/architectury/transformer/TransformerRuntime.class" -> "dev.architectury.transformer"
                                 String packageName = relative.substring(0, relative.lastIndexOf('/')).replace('/', '.');
